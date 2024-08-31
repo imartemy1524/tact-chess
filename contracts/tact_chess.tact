@@ -4,6 +4,10 @@ import "./chess.tact";
 message MoveMsg{
     move: Move;
 }
+struct GameResponse{
+    game: Game;
+    moves: map<Int as uint16, Move>;
+}
 
 contract TactChess with Deployable {
     game: Game;
@@ -19,6 +23,12 @@ contract TactChess with Deployable {
         self.game = self.game.move(move.move, self.moves);
         self.moves.set(self.lastMoveIndex, move.move);
         self.lastMoveIndex = self.lastMoveIndex + 1;
+    }
+    get fun game(): GameResponse{
+        return GameResponse{
+            game: self.game,
+            moves: self.moves
+        };
     }
 
     // Empty init() function is present by default in all Tact contracts

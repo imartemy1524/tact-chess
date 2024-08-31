@@ -47,27 +47,11 @@ struct Position{
     x: Int as int8;
     y: Int as int8;
 }
-struct Row{
-    a: Int as uint8 = 0;
-    b: Int as uint8 = 0;
-    c: Int as uint8 = 0;
-    d: Int as uint8 = 0;
-    e: Int as uint8 = 0;
-    f: Int as uint8 = 0;
-    g: Int as uint8 = 0;
-    h: Int as uint8 = 0;
-}
 
 struct Board{
-    // y1, y2, ... - rows of the board at y = 0, 1, ...
-    y1: Row;
-    y2: Row;
-    y3: Row;
-    y4: Row;
-    y5: Row;
-    y6: Row;
-    y7: Row;
-    y8: Row;
+
+    //lets store the board as 8 rows * 8 columns * 4 bits per cell
+    game: Int as uint256;
 }
 struct Move{
     fromX: Int as uint8;
@@ -87,11 +71,13 @@ struct Game {
     whiteTurn: Bool = true;
 
     // Castling flags
-    whiteKingMoved: Bool = false;
-    blackKingMoved: Bool = false;
-    blackRockLeftMoved: Bool = false;
-    blackRockRightMoved: Bool = false;
-    lastMove: Move = Move{fromX: 0, fromY: 0, toX: 0, toY: 0};
+    whiteCanCastleKing: Bool = false;
+    whiteCanCastleQueen: Bool = false;
+    blackCanCastleKing: Bool = false;
+    blackCanCastleQueen: Bool = false;
+    halfMoveClock: Int as uint16 = 0;
+
+    lastMove: Move = Move{ fromX: 0, fromY: 0, toX: 0, toY: 0};
 }
 
 
@@ -139,15 +125,16 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
         require(false, "Uknown piece moved!");
     }
 
-    requirePositionStillValid(self, self.whiteKingMoved);
-
+    requirePositionStillValid(self, self.whiteTurn);
     if(piece.isKing()){
         //TODO: add castling logic
         if(self.whiteTurn){
-            self.whiteKingMoved = true;
+            self.whiteCanCastleKing = false;
+            self.whiteCanCastleQueen = false;
         }
         else{
-            self.blackKingMoved = true;
+            self.blackCanCastleKing = false;
+            self.blackCanCastleQueen = false;
         }
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
         self.board.set(mv.toX, mv.toY, piece);
@@ -156,7 +143,11 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
         self.board.set(mv.toX, mv.toY, piece);
     }
+    // increase halfMoveClock if no pawn was moved and no piece was captured
+    self.halfMoveClock = (!piece.isPawn() && target.isEmpty()) ? self.halfMoveClock + 1 : 0;
+    self.lastMove = mv;
     self.whiteTurn = !self.whiteTurn;
+
     return self;
 }
 
@@ -166,198 +157,82 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
 extends fun at(self: Board, x: Int, y: Int): Int{
     require(x >= 0 && x <= 7, "x must be between 0 and 7");
     require(y >= 0 && y <= 7, "y must be between 0 and 7");
-    let row: Row = self.y1;
-    if y == 1 {
-        row = self.y2;
-    } else if y == 2{
-        row = self.y3;
-    } else if y == 3{
-        row = self.y4;
-    } else if y == 4{
-        row = self.y5;
-    } else if y == 5{
-        row = self.y6;
-    } else if y == 6{
-        row = self.y7;
-    } else {
-        row = self.y8;
-    }
-    if x == 0{
-        return row.a;
-    } else if x == 1{
-        return row.b;
-    } else if x == 2{
-        return row.c;
-    } else if x == 3{
-        return row.d;
-    } else if x == 4{
-        return row.e;
-    } else if x == 5{
-        return row.f;
-    } else if x == 6{
-        return row.g;
-    }
-    return row.h;
+    let offset: Int = 4 * (8 * y + x);
+    let shifted = self.game >> offset;
+    return shifted & 0xF;
 }
 
-extends fun set(self: Board, x: Int, y: Int, value: Int){
+extends mutates fun set(self: Board, x: Int, y: Int, value: Int): Board{
     require(x >= 0 && x <= 7, "x must be between 0 and 7");
     require(y >= 0 && y <= 7, "y must be between 0 and 7");
-    let row: Row = self.y1;
-    if y == 1 {
-        row = self.y2;
-    } else if y == 2{
-        row = self.y3;
-    } else if y == 3{
-        row = self.y4;
-    } else if y == 4{
-        row = self.y5;
-    } else if y == 5{
-        row = self.y6;
-    } else if y == 6{
-        row = self.y7;
-    } else {
-        row = self.y8;
-    }
-    if x == 0{
-        row.a = value;
-    } else if x == 1{
-        row.b = value;
-    } else if x == 2{
-        row.c = value;
-    } else if x == 3{
-        row.d = value;
-    } else if x == 4{
-        row.e = value;
-    } else if x == 5{
-        row.f = value;
-    } else if x == 6{
-        row.g = value;
-    }
-    else{
-        row.h = value;
-    }
-    if y == 0{
-        self.y1 = row;
-    } else if y == 1 {
-        self.y2 = row;
-    } else if y == 2{
-        self.y3 = row;
-    } else if y == 3{
-        self.y4 = row;
-    } else if y == 4{
-        self.y5 = row;
-    } else if y == 5{
-        self.y6 = row;
-    } else if y == 6{
-        self.y7 = row;
-    } else {
-        self.y8 = row;
-    }
-
+    //clear the bits at the position
+    let gameWithZeroAtBit = self.game & ~(0xF << (4 * (8 * y + x)));
+    //set the bits at the position
+    self.game = gameWithZeroAtBit | (value << (4 * (8 * y + x)));
+    return self;
 }
 extends fun findFigure(self: Board, which: Int): Position{
-    let y: Int = 0;
-    let row: Row = self.y1;
+    let gameOld = self.game;
+    let y=0;
+
     while(y < 8){
-        if row.a == which{
-            return Position{x: 0, y};
+        let x=0;
+        while(x < 8){
+            let figure = gameOld & 0xF;
+            if(figure == which){
+                return Position{
+                x: x, y: y};
+            }
+            gameOld = gameOld >> 4;
+            x = x + 1;
         }
-        if row.b == which{
-            return Position{x: 1, y};
-        }
-        if row.c == which{
-            return Position{x: 2, y};
-        }
-        if row.d == which{
-            return Position{x: 3, y};
-        }
-        if row.e == which{
-            return Position{x: 4, y};
-        }
-        if row.f == which{
-            return Position{x: 5, y};
-        }
-        if row.g == which{
-            return Position{x: 6, y};
-        }
-        if row.h == which{
-            return Position{x: 7, y};
-        }
-        if(y == 0){
-            row = self.y2;
-        } else if(y == 1){
-            row = self.y3;
-        } else if(y == 2){
-            row = self.y4;
-        } else if(y == 3){
-            row = self.y5;
-        } else if(y == 4){
-            row = self.y6;
-        } else if(y == 5){
-            row = self.y7;
-        } else if(y == 6){
-            row = self.y8;
-        }
-        y += 1;
+        y = y + 1;
     }
     require(false, "Figure not found");
-    return Position{x: 0, y: 0};
+    return Position{
+    x: 0, y: 0};
 }
 
 inline fun startBoard(): Board{
+    let g = 0;
+    g = g | SPOT_ROOK_WHITE;
+    g = g | (SPOT_KNIGHT_WHITE << 4);
+    g = g | (SPOT_BISHOP_WHITE << 8);
+    g = g | (SPOT_QUEEN_WHITE << 12);
+    g = g | (SPOT_KING_WHITE << 16);
+    g = g | (SPOT_BISHOP_WHITE << 20);
+    g = g | (SPOT_KNIGHT_WHITE << 24);
+    g = g | (SPOT_ROOK_WHITE << 28);
+    g = g | (SPOT_PAWN_WHITE << 32);
+    g = g | (SPOT_PAWN_WHITE << 36);
+    g = g | (SPOT_PAWN_WHITE << 40);
+    g = g | (SPOT_PAWN_WHITE << 44);
+    g = g | (SPOT_PAWN_WHITE << 48);
+    g = g | (SPOT_PAWN_WHITE << 52);
+    g = g | (SPOT_PAWN_WHITE << 56);
+    g = g | (SPOT_PAWN_WHITE << 60);
+
+    g = g | (SPOT_ROOK_BLACK << (256 - 4));
+    g = g | (SPOT_KNIGHT_BLACK << (256 - 8));
+    g = g | (SPOT_BISHOP_BLACK << (256 - 12));
+    g = g | (SPOT_KING_BLACK << (256 - 16));
+    g = g | (SPOT_QUEEN_BLACK << (256 - 24));
+    g = g | (SPOT_BISHOP_BLACK << (256 - 28));
+    g = g | (SPOT_KNIGHT_BLACK << (256 - 32));
+    g = g | (SPOT_ROOK_BLACK << (256 - 36));
+    g = g | (SPOT_PAWN_BLACK << (256 - 40));
+    g = g | (SPOT_PAWN_BLACK << (256 - 44));
+    g = g | (SPOT_PAWN_BLACK << (256 - 48));
+    g = g | (SPOT_PAWN_BLACK << (256 - 52));
+    g = g | (SPOT_PAWN_BLACK << (256 - 56));
+    g = g | (SPOT_PAWN_BLACK << (256 - 60));
+    g = g | (SPOT_PAWN_BLACK << (256 - 64));
+    g = g | (SPOT_PAWN_BLACK << (256 - 68));
     return Board{
-        y1: Row{
-            a: SPOT_ROOK_WHITE,
-            b: SPOT_KNIGHT_WHITE,
-            c: SPOT_BISHOP_WHITE,
-            d: SPOT_QUEEN_WHITE,
-            e: SPOT_KING_WHITE,
-            f: SPOT_BISHOP_WHITE,
-            g: SPOT_KNIGHT_WHITE,
-            h: SPOT_ROOK_WHITE
-        },
-        y2: Row{
-            a: SPOT_PAWN_WHITE,
-            b: SPOT_PAWN_WHITE,
-            c: SPOT_PAWN_WHITE,
-            d: SPOT_PAWN_WHITE,
-            e: SPOT_PAWN_WHITE,
-            f: SPOT_PAWN_WHITE,
-            g: SPOT_PAWN_WHITE,
-            h: SPOT_PAWN_WHITE
-        },
-        y3: emptyRow(),
-        y4: emptyRow(),
-        y5: emptyRow(),
-        y6: emptyRow(),
-        y7: Row{
-            a: SPOT_PAWN_BLACK,
-            b: SPOT_PAWN_BLACK,
-            c: SPOT_PAWN_BLACK,
-            d: SPOT_PAWN_BLACK,
-            e: SPOT_PAWN_BLACK,
-            f: SPOT_PAWN_BLACK,
-            g: SPOT_PAWN_BLACK,
-            h: SPOT_PAWN_BLACK
-        },
-        y8: Row{
-            a: SPOT_ROOK_BLACK,
-            b: SPOT_KNIGHT_BLACK,
-            c: SPOT_BISHOP_BLACK,
-            d: SPOT_QUEEN_BLACK,
-            e: SPOT_KING_BLACK,
-            f: SPOT_BISHOP_BLACK,
-            g: SPOT_KNIGHT_BLACK,
-            h: SPOT_ROOK_BLACK
-        }
-    };
+    game: g};
 }
 
 
-inline fun emptyRow(): Row{
-    return Row{a:0};
-}
 
 
 
