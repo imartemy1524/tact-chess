@@ -44,8 +44,8 @@ extends inline fun isKing(self: Int): Bool{
 }
 
 struct Position{
-    x: Int;
-    y: Int;
+    x: Int as int8;
+    y: Int as int8;
 }
 struct Row{
     a: Int as uint8 = 0;
@@ -89,6 +89,8 @@ struct Game {
     // Castling flags
     whiteKingMoved: Bool = false;
     blackKingMoved: Bool = false;
+    blackRockLeftMoved: Bool = false;
+    blackRockRightMoved: Bool = false;
     lastMove: Move = Move{fromX: 0, fromY: 0, toX: 0, toY: 0};
 }
 
@@ -97,7 +99,7 @@ extends fun lastMovePiece(self: Game): Int{
     return self.board.at(self.lastMove.toX, self.lastMove.toY);
 }
 
-extends fun move(self: Game, mv: Move): Game{
+extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
     let piece: Int = self.board.at(mv.fromX, mv.fromY);
     let target: Int = self.board.at(mv.toX, mv.toY);
     require(!piece.isEmpty(), "No piece at the source position");
@@ -139,7 +141,22 @@ extends fun move(self: Game, mv: Move): Game{
 
     requirePositionStillValid(self, self.whiteKingMoved);
 
-
+    if(piece.isKing()){
+        //TODO: add castling logic
+        if(self.whiteTurn){
+            self.whiteKingMoved = true;
+        }
+        else{
+            self.blackKingMoved = true;
+        }
+        self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
+        self.board.set(mv.toX, mv.toY, piece);
+    }
+    else {
+        self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
+        self.board.set(mv.toX, mv.toY, piece);
+    }
+    self.whiteTurn = !self.whiteTurn;
     return self;
 }
 
@@ -183,6 +200,62 @@ extends fun at(self: Board, x: Int, y: Int): Int{
     return row.h;
 }
 
+extends fun set(self: Board, x: Int, y: Int, value: Int){
+    require(x >= 0 && x <= 7, "x must be between 0 and 7");
+    require(y >= 0 && y <= 7, "y must be between 0 and 7");
+    let row: Row = self.y1;
+    if y == 1 {
+        row = self.y2;
+    } else if y == 2{
+        row = self.y3;
+    } else if y == 3{
+        row = self.y4;
+    } else if y == 4{
+        row = self.y5;
+    } else if y == 5{
+        row = self.y6;
+    } else if y == 6{
+        row = self.y7;
+    } else {
+        row = self.y8;
+    }
+    if x == 0{
+        row.a = value;
+    } else if x == 1{
+        row.b = value;
+    } else if x == 2{
+        row.c = value;
+    } else if x == 3{
+        row.d = value;
+    } else if x == 4{
+        row.e = value;
+    } else if x == 5{
+        row.f = value;
+    } else if x == 6{
+        row.g = value;
+    }
+    else{
+        row.h = value;
+    }
+    if y == 0{
+        self.y1 = row;
+    } else if y == 1 {
+        self.y2 = row;
+    } else if y == 2{
+        self.y3 = row;
+    } else if y == 3{
+        self.y4 = row;
+    } else if y == 4{
+        self.y5 = row;
+    } else if y == 5{
+        self.y6 = row;
+    } else if y == 6{
+        self.y7 = row;
+    } else {
+        self.y8 = row;
+    }
+
+}
 extends fun findFigure(self: Board, which: Int): Position{
     let y: Int = 0;
     let row: Row = self.y1;

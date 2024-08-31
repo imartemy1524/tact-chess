@@ -147,7 +147,11 @@ extends inline fun isUnderAttack(self: Board, position: Position, isWhite: Bool)
     if isRockOrQueenNearby(self, position, isWhite){
         return true;
     }
-
+    //check that there is no bishop/queen, that can attack the spot
+    //goes diagonally
+    if isBishopOrQueenNearby(self, position, isWhite){
+        return true;
+    }
 
     return false;
 }
@@ -271,6 +275,66 @@ inline fun isKnightNearby(board: Board, position: Position, isWhite: Bool): Bool
     }
     return false;
 
+}
+
+inline fun isBishopOrQueenNearby(board: Board, position: Position, isWhite: Bool): Bool{
+    let BISHOP = isWhite ? SPOT_BISHOP_WHITE: SPOT_BISHOP_BLACK;
+    let QUEEN = isWhite ? SPOT_QUEEN_WHITE: SPOT_QUEEN_BLACK;
+    let x: Int = position.x + 1;
+    let y: Int = position.y + 1;
+    let valid: Bool = true;
+    //check diagonal
+    while (x < 8 && y < 8 && valid) {
+        if board.at(x, y) == BISHOP || board.at(x, y) == QUEEN {
+            return true;
+        }
+        if !board.at(x, y).isEmpty(){
+            valid = false;
+        }
+        x += 1;
+        y += 1;
+    }
+    //check other diagonal
+    x = position.x - 1;
+    y = position.y - 1;
+    valid = true;
+    while (x >= 0 && y >= 0 && valid) {
+        if board.at(x, y) == BISHOP || board.at(x, y) == QUEEN {
+            return true;
+        }
+        if !board.at(x, y).isEmpty(){
+            valid = false;
+        }
+        x -= 1;
+        y -= 1;
+    }
+    x = position.x + 1;
+    y = position.y - 1;
+    valid = true;
+    while (x < 8 && y >= 0 && valid) {
+        if board.at(x, y) == BISHOP || board.at(x, y) == QUEEN {
+            return true;
+        }
+        if !board.at(x, y).isEmpty(){
+            valid = false;
+        }
+        x += 1;
+        y -= 1;
+    }
+    x = position.x - 1;
+    y = position.y + 1;
+    valid = true;
+    while (x >= 0 && y < 8 && valid) {
+        if board.at(x, y) == BISHOP || board.at(x, y) == QUEEN {
+            return true;
+        }
+        if !board.at(x, y).isEmpty(){
+            valid = false;
+        }
+        x -= 1;
+        y += 1;
+    }
+    return false;
 }
 
 //checks, that there is a king nearby

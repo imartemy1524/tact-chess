@@ -7,7 +7,8 @@ message MoveMsg{
 
 contract TactChess with Deployable {
     game: Game;
-
+    moves: map<Int as uint16, Move> = emptyMap();
+    lastMoveIndex: Int as uint16 = 0;
     init(){
         self.game = Game{
             board: startBoard()
@@ -15,8 +16,11 @@ contract TactChess with Deployable {
     }
     receive(move: MoveMsg){
         //TODO: check that sender is one of the players
-        self.game = self.game.move(move.move);
+        self.game = self.game.move(move.move, self.moves);
+        self.moves.set(self.lastMoveIndex, move.move);
+        self.lastMoveIndex = self.lastMoveIndex + 1;
     }
+
     // Empty init() function is present by default in all Tact contracts
     // since v1.3.0, so the following may be omitted:
     //
