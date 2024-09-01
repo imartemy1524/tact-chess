@@ -3,6 +3,7 @@ import "@stdlib/deploy";
 import "./chess.tact";
 message MoveMsg{
     move: Move;
+    promotion: Int as uint8 = 0;
 }
 struct GameResponse{
     game: Game;
@@ -12,7 +13,7 @@ struct GameResponse{
 contract TactChess with Deployable {
     game: Game;
     moves: map<Int as uint16, Move> = emptyMap();
-    lastMoveIndex: Int as uint16 = 0;
+    movesLength: Int as uint16 = 0;
     init(){
         self.game = Game{
             board: startBoard()
@@ -20,15 +21,19 @@ contract TactChess with Deployable {
     }
     receive(move: MoveMsg){
         //TODO: check that sender is one of the players
-        self.game = self.game.move(move.move, self.moves);
-        self.moves.set(self.lastMoveIndex, move.move);
-        self.lastMoveIndex = self.lastMoveIndex + 1;
+        self.game = self.game.move(move.move, self.lastMove(), move.promotion);
+        self.moves.set(self.movesLength, move.move);
+        self.movesLength = self.movesLength + 1;
     }
     get fun game(): GameResponse{
         return GameResponse{
             game: self.game,
             moves: self.moves
         };
+    }
+
+    inline fun lastMove(): Move{
+        return self.movesLength != 0 ? self.moves.get(self.movesLength - 1)!!: Move{fromX: 0, fromY: 0, toX: 0, toY: 0};
     }
 
     // Empty init() function is present by default in all Tact contracts

@@ -7,7 +7,7 @@ inline fun canMoveRock(game: Game, move: Move): Bool{
     }
     if(deltaX != 0 ){
         let i = (deltaX > 0 ? 1 : -1);
-        repeat(abs(deltaX)){
+        repeat(abs(deltaX)-1){
             let x: Int = move.fromX + i;
             let y: Int = move.fromY;
             if !game.board.at(x, y).isEmpty(){
@@ -19,7 +19,7 @@ inline fun canMoveRock(game: Game, move: Move): Bool{
     }
     else{
         let i = (deltaY > 0 ? 1 : -1);
-        repeat(abs(deltaY)){
+        repeat(abs(deltaY)-1){
             let x: Int = move.fromX;
             let y: Int = move.fromY + i;
             if !game.board.at(x, y).isEmpty(){
@@ -37,22 +37,21 @@ inline fun canMoveBishop(game: Game, move: Move): Bool{
     }
     let signX: Int = (move.toX - move.fromX)>0?1:-1;
     let signY: Int = (move.toY - move.fromY)>0?1:-1;
-    let offsetX = signX;
-    let offsetY = signY;
-    repeat(abs(countX)){
-        let x: Int = move.fromX + offsetX;
-        let y: Int = move.fromY + offsetY;
+    let x =move.fromX;
+    let y =move.fromY;
+    repeat(abs(countX)-1){
+        x += signX;
+        y += signY;
+
         if !game.board.at(x, y).isEmpty(){
             return false;
         }
-        offsetX += signX;
-        offsetY += signY;
     }
     return true;
 
 }
 //checks that pawn can do a move
-inline fun requireCanMovePawn(game: Game, move: Move, isWhite: Bool){
+inline fun requireCanMovePawn(game: Game, move: Move, lastMove: Move, isWhite: Bool){
     if(move.fromX != move.toX){
         //moving horizontaly - only if eating someone
         require(move.toY == move.fromY + (isWhite?1:-1), "To long move");
@@ -65,12 +64,12 @@ inline fun requireCanMovePawn(game: Game, move: Move, isWhite: Bool){
         (
         // on the destination space - 1 pawn exists
         game.board.at(move.toX, move.toY + (isWhite?-1:1)) == (isWhite?SPOT_PAWN_BLACK:SPOT_PAWN_WHITE) &&
-        game.lastMovePiece().isPawn() &&
+        game.board.at(lastMove.toX, lastMove.toY).isPawn() &&
 
-        game.lastMove.fromX == move.toX &&
-        game.lastMove.toX == move.toX &&
-        game.lastMove.fromY == move.toY + (isWhite?1:-1) &&
-        game.lastMove.toY == move.toY + (isWhite?-1:1)
+            lastMove.fromX == move.toX &&
+            lastMove.toX == move.toX &&
+            lastMove.fromY == move.toY + (isWhite?1:-1) &&
+            lastMove.toY == move.toY + (isWhite?-1:1)
         ),
         "Invalid pawn move"
         );
@@ -105,13 +104,30 @@ inline fun requireCanMoveRook(game: Game, move: Move){
 }
 
 //checks that king can do a move
-inline fun requireCanMoveKing(game: Game, move: Move){
+inline fun requireCanMoveKing(game: Game, move: Move, isWhite: Bool){
     if(move.deltaXABS() <= 1 && move.deltaYABS() <= 1){
         //pass, everything is fine, move is valid
     }
     else{
-        //TODO: add castling logic
-        require(false, "Invalid king move");
+        //check for castling
+        require(move.deltaXABS() == 2 && move.deltaYABS() == 0, "Invalid castle move");
+        require(!game.board.isUnderAttack(move.from(), !isWhite), "Castling through check");
+
+        if(move.toX > move.fromX){
+            //king side castle
+            require(isWhite?game.whiteCanCastleKing:game.blackCanCastleKing, "No rights for castling");
+            require(game.board.at(move.fromX+1, move.fromY).isEmpty(), "Castling through figures");
+            require(game.board.at(move.fromX+2, move.fromY).isEmpty(), "Castling through figures");
+            require(!game.board.isUnderAttack(Position{ x: move.fromX+1, y: move.fromY }, !isWhite), "Castling through check");
+        }
+        else{
+            //queen side castle
+            require(isWhite?game.whiteCanCastleQueen:game.blackCanCastleQueen, "No rights for castling");
+            require(game.board.at(move.fromX-1, move.fromY).isEmpty(), "Castling through figures");
+            require(game.board.at(move.fromX-2, move.fromY).isEmpty(), "Castling through figures");
+            require(!game.board.isUnderAttack(Position{x: move.fromX-1, y: move.fromY }, !isWhite), "Castling through check");
+        }
+
     }
 }
 
@@ -129,6 +145,7 @@ inline fun requirePositionStillValid(game: Game, checkWhite: Bool){
 
 
 //checks, that the spot is under attack (true if it is)
+//set isWhite to true, if you want to check if BLACK figure is under WHITE attack
 extends inline fun isUnderAttack(self: Board, position: Position, isWhite: Bool): Bool{
     //check that there are no knights nearby, that can attack the spot
     if isKnightNearby(self, position, isWhite){

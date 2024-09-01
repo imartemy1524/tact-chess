@@ -59,6 +59,13 @@ struct Move{
     toX: Int as uint8;
     toY: Int as uint8;
 }
+
+extends inline fun from(self: Move): Position{
+    return Position{x: self.fromX, y: self.fromY};
+}
+extends inline fun to(self: Move): Position{
+    return Position{ x: self.toX, y: self.toY};
+}
 extends inline fun deltaXABS(self: Move): Int{
     return abs(self.toX - self.fromX);
 }
@@ -71,21 +78,16 @@ struct Game {
     whiteTurn: Bool = true;
 
     // Castling flags
-    whiteCanCastleKing: Bool = false;
-    whiteCanCastleQueen: Bool = false;
-    blackCanCastleKing: Bool = false;
-    blackCanCastleQueen: Bool = false;
+    whiteCanCastleKing: Bool = true;
+    whiteCanCastleQueen: Bool = true;
+    blackCanCastleKing: Bool = true;
+    blackCanCastleQueen: Bool = true;
     halfMoveClock: Int as uint16 = 0;
 
-    lastMove: Move = Move{ fromX: 0, fromY: 0, toX: 0, toY: 0};
 }
 
 
-extends fun lastMovePiece(self: Game): Int{
-    return self.board.at(self.lastMove.toX, self.lastMove.toY);
-}
-
-extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
+extends fun move(self: Game, mv: Move, lastMove: Move, promotionTo: Int): Game{
     let piece: Int = self.board.at(mv.fromX, mv.fromY);
     let target: Int = self.board.at(mv.toX, mv.toY);
     require(!piece.isEmpty(), "No piece at the source position");
@@ -96,7 +98,6 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
     // moving black
     if(piece.isBlack()) {
         require(!self.whiteTurn, "It's white's turn to move");
-        //TODO: add castling logic
         require(!target.isBlack(), "Cannot capture a piece of the same color");
     }
     else {
@@ -104,7 +105,7 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
         require(!target.isWhite(), "Cannot capture a piece of the same color");
     }
     if(piece.isPawn()){
-        requireCanMovePawn(self, mv, self.whiteTurn);
+        requireCanMovePawn(self, mv, lastMove, self.whiteTurn);
     }
     else if(piece.isKnight()){
         requireCanMoveKnight(self, mv);
@@ -116,7 +117,7 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
         requireCanMoveRook(self, mv);
     }
     else if(piece.isKing()){
-        requireCanMoveKing(self, mv);
+        requireCanMoveKing(self, mv, self.whiteTurn);
     }
     else if(piece.isQueen()){
         requireCanMoveQueen(self, mv);
@@ -125,9 +126,7 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
         require(false, "Uknown piece moved!");
     }
 
-    requirePositionStillValid(self, self.whiteTurn);
     if(piece.isKing()){
-        //TODO: add castling logic
         if(self.whiteTurn){
             self.whiteCanCastleKing = false;
             self.whiteCanCastleQueen = false;
@@ -136,8 +135,58 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
             self.blackCanCastleKing = false;
             self.blackCanCastleQueen = false;
         }
+        if(mv.deltaXABS() == 2){
+            //TODO: add castling logic (move rock)
+            if(mv.toX > mv.fromX){
+                let rook = self.board.at(7, mv.fromY);
+                self.board.set(7, mv.fromY, SPOT_EMPTY);
+                self.board.set(5, mv.fromY, rook);
+            }
+            else{
+                let rook = self.board.at(0, mv.fromY);
+                self.board.set(0, mv.fromY, SPOT_EMPTY);
+                self.board.set(3, mv.fromY, rook);
+            }
+        }
+
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
         self.board.set(mv.toX, mv.toY, piece);
+    }
+    else if(piece.isRook()){
+        //Castling logic
+        if(self.whiteTurn){
+            if(mv.fromX == 0){
+                self.whiteCanCastleQueen = false;
+            }
+            else if(mv.fromX == 7){
+                self.whiteCanCastleKing = false;
+            }
+        }
+        else{
+            if(mv.fromX == 0){
+                self.blackCanCastleQueen = false;
+            }
+            else if(mv.fromX == 7){
+                self.blackCanCastleKing = false;
+            }
+        }
+        self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
+        self.board.set(mv.toX, mv.toY, piece);
+    }
+    else if(piece.isPawn()){
+        if(mv.toY == 0 || mv.toY == 7){
+            //TODO: pawn promotion
+            require(false, "Pawn promotion not implemented");
+        }
+        else{
+            self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
+            self.board.set(mv.toX, mv.toY, piece);
+            if(target.isEmpty() && mv.deltaXABS() == 1 && mv.deltaYABS() == 1){
+                //en passant
+                let enPassantY = self.whiteTurn ? mv.toY - 1 : mv.toY + 1;
+                self.board.set(mv.toX, enPassantY, SPOT_EMPTY);
+            }
+        }
     }
     else {
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
@@ -145,7 +194,8 @@ extends fun move(self: Game, mv: Move, moves: map<Int as uint16, Move>): Game{
     }
     // increase halfMoveClock if no pawn was moved and no piece was captured
     self.halfMoveClock = (!piece.isPawn() && target.isEmpty()) ? self.halfMoveClock + 1 : 0;
-    self.lastMove = mv;
+    // check if the move is valid after the move, i.e. the king is not under attack
+    requirePositionStillValid(self, self.whiteTurn);
     self.whiteTurn = !self.whiteTurn;
 
     return self;
@@ -193,45 +243,49 @@ extends fun findFigure(self: Board, which: Int): Position{
     x: 0, y: 0};
 }
 
+//inline fun startBoard(): Board{
+//    let g = 0;
+//    g = g | SPOT_ROOK_WHITE;
+//    g = g | (SPOT_KNIGHT_WHITE << 4);
+//    g = g | (SPOT_BISHOP_WHITE << 8);
+//    g = g | (SPOT_QUEEN_WHITE << 12);
+//    g = g | (SPOT_KING_WHITE << 16);
+//    g = g | (SPOT_BISHOP_WHITE << 20);
+//    g = g | (SPOT_KNIGHT_WHITE << 24);
+//    g = g | (SPOT_ROOK_WHITE << 28);
+//
+//    g = g | (SPOT_PAWN_WHITE << 32);
+//    g = g | (SPOT_PAWN_WHITE << 36);
+//    g = g | (SPOT_PAWN_WHITE << 40);
+//    g = g | (SPOT_PAWN_WHITE << 44);
+//    g = g | (SPOT_PAWN_WHITE << 48);
+//    g = g | (SPOT_PAWN_WHITE << 52);
+//    g = g | (SPOT_PAWN_WHITE << 56);
+//    g = g | (SPOT_PAWN_WHITE << 60);
+//
+//    g = g | (SPOT_ROOK_BLACK << (256 - 4));
+//    g = g | (SPOT_KNIGHT_BLACK << (256 - 8));
+//    g = g | (SPOT_BISHOP_BLACK << (256 - 12));
+//    g = g | (SPOT_KING_BLACK << (256 - 16));
+//    g = g | (SPOT_QUEEN_BLACK << (256 - 20));
+//    g = g | (SPOT_BISHOP_BLACK << (256 - 24));
+//    g = g | (SPOT_KNIGHT_BLACK << (256 - 28));
+//    g = g | (SPOT_ROOK_BLACK << (256 - 32));
+//
+//    g = g | (SPOT_PAWN_BLACK << (256 - 36));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 40));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 44));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 48));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 52));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 56));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 60));
+//    g = g | (SPOT_PAWN_BLACK << (256 - 64));
+//    return Board{
+//    game: g};
+//}
 inline fun startBoard(): Board{
-    let g = 0;
-    g = g | SPOT_ROOK_WHITE;
-    g = g | (SPOT_KNIGHT_WHITE << 4);
-    g = g | (SPOT_BISHOP_WHITE << 8);
-    g = g | (SPOT_QUEEN_WHITE << 12);
-    g = g | (SPOT_KING_WHITE << 16);
-    g = g | (SPOT_BISHOP_WHITE << 20);
-    g = g | (SPOT_KNIGHT_WHITE << 24);
-    g = g | (SPOT_ROOK_WHITE << 28);
-    g = g | (SPOT_PAWN_WHITE << 32);
-    g = g | (SPOT_PAWN_WHITE << 36);
-    g = g | (SPOT_PAWN_WHITE << 40);
-    g = g | (SPOT_PAWN_WHITE << 44);
-    g = g | (SPOT_PAWN_WHITE << 48);
-    g = g | (SPOT_PAWN_WHITE << 52);
-    g = g | (SPOT_PAWN_WHITE << 56);
-    g = g | (SPOT_PAWN_WHITE << 60);
-
-    g = g | (SPOT_ROOK_BLACK << (256 - 4));
-    g = g | (SPOT_KNIGHT_BLACK << (256 - 8));
-    g = g | (SPOT_BISHOP_BLACK << (256 - 12));
-    g = g | (SPOT_KING_BLACK << (256 - 16));
-    g = g | (SPOT_QUEEN_BLACK << (256 - 24));
-    g = g | (SPOT_BISHOP_BLACK << (256 - 28));
-    g = g | (SPOT_KNIGHT_BLACK << (256 - 32));
-    g = g | (SPOT_ROOK_BLACK << (256 - 36));
-    g = g | (SPOT_PAWN_BLACK << (256 - 40));
-    g = g | (SPOT_PAWN_BLACK << (256 - 44));
-    g = g | (SPOT_PAWN_BLACK << (256 - 48));
-    g = g | (SPOT_PAWN_BLACK << (256 - 52));
-    g = g | (SPOT_PAWN_BLACK << (256 - 56));
-    g = g | (SPOT_PAWN_BLACK << (256 - 60));
-    g = g | (SPOT_PAWN_BLACK << (256 - 64));
-    g = g | (SPOT_PAWN_BLACK << (256 - 68));
-    return Board{
-    game: g};
+    return Board{game: 0x42365324111111110000000000000000000000000000000077777777a89cb98a};
 }
-
 
 
 
