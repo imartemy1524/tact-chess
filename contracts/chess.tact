@@ -47,6 +47,12 @@ struct Position{
     x: Int as int8;
     y: Int as int8;
 }
+extends inline fun toInt(self: Position): Int{
+    return (self.y << 3) + self.x;
+}
+extends inline fun positionFromInt(self: Int): Position{
+    return Position{x: self & 0x7, y: self >>3};
+}
 
 struct Board{
 
@@ -175,8 +181,15 @@ extends fun move(self: Game, mv: Move, lastMove: Move, promotionTo: Int): Game{
     }
     else if(piece.isPawn()){
         if(mv.toY == 0 || mv.toY == 7){
-            //TODO: pawn promotion
-            require(false, "Pawn promotion not implemented");
+            if self.whiteTurn {
+                require(promotionTo == SPOT_ROOK_WHITE || promotionTo == SPOT_KNIGHT_WHITE || promotionTo == SPOT_BISHOP_WHITE || promotionTo == SPOT_QUEEN_WHITE, "Invalid promotion piece");
+            }
+            else {
+                require(promotionTo == SPOT_ROOK_BLACK || promotionTo == SPOT_KNIGHT_BLACK || promotionTo == SPOT_BISHOP_BLACK || promotionTo == SPOT_QUEEN_BLACK, "Invalid promotion piece");
+            }
+
+            self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
+            self.board.set(mv.toX, mv.toY, promotionTo);
         }
         else{
             self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);

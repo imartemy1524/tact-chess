@@ -258,4 +258,5 @@ export async function checkGame(chess: SandboxContract<TactChess>, sender: Sende
 
         expectEqualsChess(board, buildChessBoardFromGame(await chess.getGame()));
     }
+    return board;
 }
