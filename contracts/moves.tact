@@ -50,14 +50,22 @@ inline fun canMoveBishop(game: Game, move: Move): Bool{
     return true;
 
 }
-//checks that pawn can do a move
-inline fun requireCanMovePawn(game: Game, move: Move, lastMove: Move, isWhite: Bool){
+inline fun canMoveKnight(game: Game, move: Move): Bool{
+    let deltaX: Int = move.deltaXABS();
+    let deltaY: Int = move.deltaYABS();
+    return deltaX + deltaY == 3 && deltaX != 0 && deltaY != 0;
+}
+inline fun canMovePawn(game: Game, move: Move, lastMove: Move, isWhite: Bool): Bool{
     if(move.fromX != move.toX){
         //moving horizontaly - only if eating someone
-        require(move.toY == move.fromY + (isWhite?1:-1), "To long move");
-        require(abs(move.fromX - move.toX) == 1, "Invalid pawn move");
+        if!(move.toY == move.fromY + (isWhite?1:-1)){
+            return false;
+        }
+        if(abs(move.fromX - move.toX) != 1) {
+            return false;
+        }
         //checks that it actially eats the figure
-        require(
+        if !(
         //the target should be non-empty
         !game.board.at(move.toX, move.toY).isEmpty() ||
         // En passant
@@ -66,31 +74,42 @@ inline fun requireCanMovePawn(game: Game, move: Move, lastMove: Move, isWhite: B
         game.board.at(move.toX, move.toY + (isWhite?-1:1)) == (isWhite?SPOT_PAWN_BLACK:SPOT_PAWN_WHITE) &&
         game.board.at(lastMove.toX, lastMove.toY).isPawn() &&
 
-            lastMove.fromX == move.toX &&
-            lastMove.toX == move.toX &&
-            lastMove.fromY == move.toY + (isWhite?1:-1) &&
-            lastMove.toY == move.toY + (isWhite?-1:1)
-        ),
-        "Invalid pawn move"
-        );
+        lastMove.fromX == move.toX &&
+        lastMove.toX == move.toX &&
+        lastMove.fromY == move.toY + (isWhite?1:-1) &&
+        lastMove.toY == move.toY + (isWhite?-1:1)
+        )
+        ){
+            return false;
+        }
     }
     else if(move.toY == move.fromY + (isWhite?2:-2)) {
-        require(
-        move.fromY == (isWhite?1:6) && game.board.at(move.fromX, isWhite?2:5).isEmpty() && game.board.at(move.fromX, isWhite?3:4).isEmpty(),
-        "Invalid pawn move"
-        );
+        if!(
+        move.fromY == (isWhite?1:6) && game.board.at(move.fromX, isWhite?2:5).isEmpty() && game.board.at(move.fromX, isWhite?3:4).isEmpty()
+        ){
+            return false;
+        }
     }
     else {
-        require(move.toY == move.fromY + (isWhite?1:-1), "To long move");
-        require(game.board.at(move.toX, move.toY).isEmpty(), "Invalid pawn move");
+        if !(move.toY == move.fromY + (isWhite?1:-1)){
+            return false;
+        }
+        if!(game.board.at(move.toX, move.toY).isEmpty()){
+            return false
+        }
     }
+    return true;
+
+}
+
+//checks that pawn can do a move
+inline fun requireCanMovePawn(game: Game, move: Move, lastMove: Move, isWhite: Bool){
+    require(canMovePawn(game, move, lastMove, isWhite), "Invalid pawn move");
 }
 
 //checks that knight can do a move
 inline fun requireCanMoveKnight(game: Game, move: Move){
-    let deltaX: Int = move.deltaXABS();
-    let deltaY: Int = move.deltaYABS();
-    require(deltaX + deltaY == 3 && deltaX != 0 && deltaY != 0, "Invalid knight move");
+    require(canMoveKnight(game, move), "Invalid knight move");
 }
 
 //checks that bishop can do a move
@@ -108,7 +127,7 @@ inline fun requireCanMoveKing(game: Game, move: Move, isWhite: Bool){
     if(move.deltaXABS() <= 1 && move.deltaYABS() <= 1){
         //pass, everything is fine, move is valid
     }
-    else{
+    else {
         //check for castling
         require(move.deltaXABS() == 2 && move.deltaYABS() == 0, "Invalid castle move");
         require(game.board.isUnderAttack(move.from(), !isWhite) ==0, "Castling through check");
@@ -118,14 +137,16 @@ inline fun requireCanMoveKing(game: Game, move: Move, isWhite: Bool){
             require(isWhite?game.whiteCanCastleKing:game.blackCanCastleKing, "No rights for castling");
             require(game.board.at(move.fromX+1, move.fromY).isEmpty(), "Castling through figures");
             require(game.board.at(move.fromX+2, move.fromY).isEmpty(), "Castling through figures");
-            require(game.board.isUnderAttack(Position{ x: move.fromX+1, y: move.fromY }, !isWhite) == 0, "Castling through check");
+            require(game.board.isUnderAttack(Position{
+            x: move.fromX+1, y: move.fromY }, !isWhite) == 0, "Castling through check");
         }
         else{
             //queen side castle
             require(isWhite?game.whiteCanCastleQueen:game.blackCanCastleQueen, "No rights for castling");
             require(game.board.at(move.fromX-1, move.fromY).isEmpty(), "Castling through figures");
             require(game.board.at(move.fromX-2, move.fromY).isEmpty(), "Castling through figures");
-            require(game.board.isUnderAttack(Position{x: move.fromX-1, y: move.fromY }, !isWhite) == 0, "Castling through check");
+            require(game.board.isUnderAttack(Position{
+            x: move.fromX-1, y: move.fromY }, !isWhite) == 0, "Castling through check");
         }
 
     }
@@ -206,7 +227,9 @@ inline fun isRockOrQueenNearby(board: Board, position: Position, isWhite: Bool):
     while (x < 8 && valid) {
         let spot = board.at(x, y);
         if spot == ROCK || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid = false;
@@ -219,7 +242,9 @@ inline fun isRockOrQueenNearby(board: Board, position: Position, isWhite: Bool):
     while (x >= 0 && valid) {
         let spot = board.at(x, y);
         if spot == ROCK || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid = false;
@@ -232,7 +257,9 @@ inline fun isRockOrQueenNearby(board: Board, position: Position, isWhite: Bool):
     while (y < 8 && valid) {
         let spot = board.at(x, y);
         if spot == ROCK || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid=false;
@@ -244,14 +271,17 @@ inline fun isRockOrQueenNearby(board: Board, position: Position, isWhite: Bool):
     while (y >= 0 && valid) {
         let spot = board.at(x, y);
         if spot == ROCK || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !board.at(x, y).isEmpty(){
             valid = false;
         }
         y -= 1;
     }
-    return MaybeQueen{position: null, isQueen: false};
+    return MaybeQueen{
+    position: null, isQueen: false};
 }
 //checks, that there is a pawn at the any position on the board, that can attack the spot `position`
 inline fun isPawnNearby(board: Board, position: Position, isWhite: Bool): Position?{
@@ -259,22 +289,26 @@ inline fun isPawnNearby(board: Board, position: Position, isWhite: Bool): Positi
         let x: Int = position.x - 1;
         let y: Int = position.y - 1;
         if x >= 0 && y >= 0 && board.at(x, y) == SPOT_PAWN_WHITE {
-            return Position{x, y};
+            return Position{
+            x, y};
         }
         x = position.x + 1;
         if x < 8 && y >= 0 && board.at(x, y) == SPOT_PAWN_WHITE {
-            return Position{x, y};
+            return Position{
+            x, y};
         }
     }
     else{
         let x: Int = position.x - 1;
         let y: Int = position.y + 1;
         if x >= 0 && y < 8 && board.at(x, y) == SPOT_PAWN_BLACK {
-            return Position{x, y};
+            return Position{
+            x, y};
         }
         x = position.x + 1;
         if x < 8 && y < 8 && board.at(x, y) == SPOT_PAWN_BLACK {
-            return Position{x, y};
+            return Position{
+            x, y};
         }
     }
     return null;
@@ -286,36 +320,44 @@ inline fun isKnightNearby(board: Board, position: Position, isWhite: Bool): Posi
     let x: Int = position.x - 2;
     let y: Int = position.y - 1;
     if x>= 0 && y >= 0 && board.at(x, y) == KN  {
-        return Position{x, y};
+        return Position{
+        x, y};
     }
     x = position.x + 2;
     if x<8 && y >= 0 && board.at(x, y) == KN {
-        return Position{x, y};
+        return Position{
+        x, y};
     }
     y = position.y + 1;
     if x<8 && y<8 && board.at(x, y) == KN {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     x = position.x - 2;
     if x>= 0 && y<8 && board.at(x, y) == KN {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     x = position.x - 1;
     y = position.y - 2;
     if x>= 0 && y >= 0 && board.at(x, y) == KN {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     y = position.y + 2;
     if x>= 0 && y<8 && board.at(x, y) == KN {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     x = position.x + 1;
     if x<8 && y<8 && board.at(x, y) == KN {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     y = position.y - 2;
     if x<8 && y >= 0 && board.at(x, y) == KN {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     return null;
 
@@ -331,7 +373,9 @@ inline fun isBishopOrQueenNearby(board: Board, position: Position, isWhite: Bool
     while (x < 8 && y < 8 && valid) {
         let spot = board.at(x, y);
         if spot == BISHOP || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid = false;
@@ -346,7 +390,9 @@ inline fun isBishopOrQueenNearby(board: Board, position: Position, isWhite: Bool
     while (x >= 0 && y >= 0 && valid) {
         let spot = board.at(x, y);
         if spot == BISHOP || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid = false;
@@ -360,7 +406,9 @@ inline fun isBishopOrQueenNearby(board: Board, position: Position, isWhite: Bool
     while (x < 8 && y >= 0 && valid) {
         let spot = board.at(x, y);
         if spot == BISHOP || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid = false;
@@ -374,7 +422,9 @@ inline fun isBishopOrQueenNearby(board: Board, position: Position, isWhite: Bool
     while (x >= 0 && y < 8 && valid) {
         let spot = board.at(x, y);
         if spot == BISHOP || spot == QUEEN {
-            return MaybeQueen{position: Position{x, y}, isQueen: spot == QUEEN};
+            return MaybeQueen{
+            position: Position{
+            x, y}, isQueen: spot == QUEEN};
         }
         if !spot.isEmpty(){
             valid = false;
@@ -382,7 +432,8 @@ inline fun isBishopOrQueenNearby(board: Board, position: Position, isWhite: Bool
         x -= 1;
         y += 1;
     }
-    return MaybeQueen{position: null, isQueen: false};
+    return MaybeQueen{
+    position: null, isQueen: false};
 }
 
 //checks, that there is a king nearby
@@ -391,41 +442,49 @@ inline fun kingNearby(board: Board, position: Position, isWhite: Bool): Position
     let x: Int = position.x - 1;
     let y: Int = position.y - 1;
     if x >= 0 && y >= 0 && board.at(x, y) == KNG{
-        return Position{x, y};
+        return Position{
+        x, y};
     }
     x = position.x;
     if y >= 0 && board.at(x, y) == KNG {
-        return Position{x, y};
+        return Position{
+        x, y};
     }
     x = position.x + 1;
     if y >= 0 && x < 8 && board.at(x, y) == KNG {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     y = position.y;
     if x < 8 && board.at(x, y) == KNG {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     y = position.y + 1;
     if x < 8 && y < 8 && board.at(x, y) == KNG {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     x = position.x;
     if y < 8 && board.at(x, y) == KNG {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     x = position.x - 1;
     if y < 8 && x >= 0 && board.at(x, y) == KNG {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     y = position.y;
     if x >= 0 && board.at(x, y) == KNG {
-        return Position{x,y};
+        return Position{
+        x,y};
     }
     return null;
 }
 
 //checks, that the king at position `king` can move and run away from the attack
-inline fun canMoveKingAndNoCheckMate(board: Board, king: Position, isWhite: Bool){
+inline fun canMoveKingAndNoCheckMate(board: Board, king: Position, isWhite: Bool): Bool{
     //check all possible moves of the king
     let x: Int = king.x - 1;
     repeat(3){
@@ -439,7 +498,8 @@ inline fun canMoveKingAndNoCheckMate(board: Board, king: Position, isWhite: Bool
                     newBoard.set(king.x, king.y, SPOT_EMPTY);
                     newBoard.set(x, y, isWhite?SPOT_KING_WHITE:SPOT_KING_BLACK);
                     //if king moved and noone can attack him, then it is not a checkmate
-                    if newBoard.isUnderAttack(Position{x, y}, !isWhite) == 0 {
+                    if newBoard.isUnderAttack(Position{
+                    x, y}, !isWhite) == 0 {
                         return true;
                     }
                 }
@@ -451,8 +511,66 @@ inline fun canMoveKingAndNoCheckMate(board: Board, king: Position, isWhite: Bool
     return false;
 }
 
+inline fun noCheckAfterMove(kingPosition: Position, board: Game, move: Move, isWhite: Bool): Bool{
+    let newBoard = board.board;
+    let figure = newBoard.at(move.fromX, move.fromY);
+    newBoard.set(move.fromX, move.fromY, SPOT_EMPTY);
+    newBoard.set(move.toX, move.toY, figure);
+    return newBoard.isUnderAttack(kingPosition, !isWhite) == 0;
+}
+//checks, that there is a figure, that can go at the position `whom` without additional king checks
+extends inline fun someoneCanEat(self: Game, kingPosition: Position, someoneWhite: Bool, whom: Position, lastMove: Move): Bool{
+    //for each figure on the board, check if it can eat the figure at position `whom`
+    let y = 0;
+    repeat(8){
+        let x = 0;
+        repeat(8){
+            let figure = self.board.at(x, y);
+            if (someoneWhite?figure.isWhite():figure.isBlack()){
+                if figure.isKing(){
+                    //king can't eat anyone
+                }
+                else if figure.isKnight(){
+                    let move = Move{ fromX: x, fromY: y, toX: whom.x, toY: whom.y};
+                    if canMoveKnight(self, move) && noCheckAfterMove(kingPosition, self, move, someoneWhite) {
+                        return true;
+                    }
+                }
+                else if figure.isBishop(){
+                    let move = Move{ fromX: x, fromY: y, toX: whom.x, toY: whom.y};
+                    if canMoveBishop(self, move) && noCheckAfterMove(kingPosition, self, move, someoneWhite) {
+                        return true;
+                    }
+                }
+                else if figure.isRook(){
+                    let move = Move{ fromX: x, fromY: y, toX: whom.x, toY: whom.y};
+                    if canMoveRock(self, move) && noCheckAfterMove(kingPosition, self, move, someoneWhite) {
+                        return true;
+                    }
+                }
+                else if figure.isQueen(){
+                    let move = Move{ fromX: x, fromY: y, toX: whom.x, toY: whom.y};
+                    if (canMoveRock(self, move) || canMoveBishop(self, move)) && noCheckAfterMove(kingPosition, self, move, someoneWhite) {
+                        return true;
+                    }
+                }
+                else if figure.isPawn(){
+                    let move = Move{ fromX: x, fromY: y, toX: whom.x, toY: whom.y};
+                    if canMovePawn(self, move, lastMove, someoneWhite) && noCheckAfterMove(kingPosition, self, move, someoneWhite) {
+                        return true;
+                    }
+                }
 
-inline fun isCheckMate(board: Board, isWhite: Bool): Bool{
+            }
+            x += 1;
+        }
+        y += 1;
+    }
+    return false;
+}
+
+extends inline fun isCheckMate(self: Game, isWhite: Bool, lastMove: Move): Bool{
+    let board = self.board;
     let king = board.findFigure(isWhite?SPOT_KING_WHITE:SPOT_KING_BLACK);
     let attackFigures = board.isUnderAttack(king, !isWhite);
     if attackFigures == 0{
@@ -462,21 +580,88 @@ inline fun isCheckMate(board: Board, isWhite: Bool): Bool{
     if canMoveKingAndNoCheckMate(board, king, isWhite){
         return false;
     }
-    let fistAttackFigure: Int = attackFigures & 0xFF;
+    let firstAttackFigure: Int = attackFigures & 0xFF;
     let firstAttackPosition: Position = ((attackFigures >> 8) & 0xFF).positionFromInt();
 
     let secondAttackFigure: Int = (attackFigures >> 16) & 0xFF;
 
-    //if there are 2 figures, that attack the king, and king is not able to move away then it is a checkmate
+    //if there are 2 figures, that attack the king, and king is not able to move away then it is defenetly a checkmate
     if(secondAttackFigure != 0){
         dump("Double check checkmate");
         return true;
     }
     // now there is only one figure that attacks the king
-    // one should check, if it is possible either to eat the figure or to protect the king by setting a figure between the king and the attacker
-    //TODO
+    // one should check, if it is possible either to eat this figure or to protect the king by setting a figure between the king and the attacker
 
-    //check that any figure can protect the king
+    // check that someone can "eat" the attacker
+    if self.someoneCanEat(king, isWhite, firstAttackPosition, lastMove){
+        return false;
+    }
+    // El passant check - one can eat pawn by moving to the square behind the pawn
+    if firstAttackFigure.isPawn(){
+        if(
+            firstAttackPosition.x >= 1 && board.at(firstAttackPosition.x - 1, firstAttackPosition.y).isPawn() &&
+            (isWhite?board.at(firstAttackPosition.x - 1, firstAttackPosition.y).isWhite():board.at(firstAttackPosition.x - 1, firstAttackPosition.y).isBlack())
+        ){
+            if canMovePawn(self, Move{ fromX: firstAttackPosition.x - 1, fromY: firstAttackPosition.y, toX: firstAttackPosition.x, toY: firstAttackPosition.y +(isWhite?1:-1) }, lastMove, isWhite){
+                return false;
+            }
+        }
+        if(
+            firstAttackPosition.x <= 6 && board.at(firstAttackPosition.x + 1, firstAttackPosition.y).isPawn() &&
+            (isWhite?board.at(firstAttackPosition.x + 1, firstAttackPosition.y).isWhite():board.at(firstAttackPosition.x + 1, firstAttackPosition.y).isBlack())
+        ){
+            if canMovePawn(self, Move{ fromX: firstAttackPosition.x + 1, fromY: firstAttackPosition.y, toX: firstAttackPosition.x, toY: firstAttackPosition.y +(isWhite?1:-1) }, lastMove, isWhite){
+                return false;
+            }
+        }
+    }
+    // check that the figure attacks the king "horiontally" or "vertically" and it is possible, protect the king by setting a figure between the attacker and the king
+    if firstAttackFigure.isRook() || (firstAttackFigure.isQueen() && (firstAttackPosition.x == king.x || firstAttackPosition.y == king.y)){
+        //vertically and non close
+        if(firstAttackPosition.x == king.x){
+            //vertical attack
+            let delta = (firstAttackPosition.y > king.y ? 1 : -1);
+            let y: Int = king.y;
+            let x: Int = king.x;
+            repeat(abs(firstAttackPosition.y - king.y) - 1){
+                y += delta;
+                if self.someoneCanEat(king, isWhite, Position{x, y}, lastMove){
+                    return false;
+                }
+            }
+        }
+        //horizontally
+        if(firstAttackPosition.y == king.y){
+            //horizontal attack
+            let delta = (firstAttackPosition.x > king.x ? 1 : -1);
+            let y: Int = king.y;
+            let x: Int = king.x;
+            repeat(abs(firstAttackPosition.x - king.x) - 1){
+                x += delta;
+                if self.someoneCanEat(king, isWhite, Position{x, y}, lastMove){
+                    return false;
+                }
+            }
+        }
+    }
+    // check that the figure attacks the king "diagonally" and it is possible, protect the king by setting a figure between the attacker and the king
+    if firstAttackFigure.isBishop() || (firstAttackFigure.isQueen() && (abs(firstAttackPosition.x - king.x) == abs(firstAttackPosition.y - king.y))){
+        let deltaX = (firstAttackPosition.x > king.x ? 1 : -1);
+        let deltaY = (firstAttackPosition.y > king.y ? 1 : -1);
+        let x: Int = king.x;
+        let y: Int = king.y;
+        repeat(abs(firstAttackPosition.x - king.x) - 1){
+            x += deltaX;
+            y += deltaY;
+            if self.someoneCanEat(king, isWhite, Position{x, y}, lastMove){
+                return false;
+            }
+        }
+    }
+
+    //WOOF!!! It is a checkmate
+
 
     return true;
 }

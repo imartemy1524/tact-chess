@@ -40,6 +40,8 @@ contract TactChess with Deployable {
     // since v1.3.0, so the following may be omitted:
     //
     // init() {}
+
+    //TODO: add repeat moves checks
 }
 
 
