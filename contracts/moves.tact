@@ -569,6 +569,7 @@ extends inline fun someoneCanEat(self: Game, kingPosition: Position, someoneWhit
     return false;
 }
 
+//check that isWhite king is under checkmate
 extends inline fun isCheckMate(self: Game, isWhite: Bool, lastMove: Move): Bool{
     let board = self.board;
     let king = board.findFigure(isWhite?SPOT_KING_WHITE:SPOT_KING_BLACK);

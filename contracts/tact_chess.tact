@@ -8,6 +8,7 @@ message MoveMsg{
 struct GameResponse{
     game: Game;
     moves: map<Int as uint16, Move>;
+    isCheckMate: Bool = false;
 }
 
 contract TactChess with Deployable {
@@ -28,7 +29,8 @@ contract TactChess with Deployable {
     get fun game(): GameResponse{
         return GameResponse{
             game: self.game,
-            moves: self.moves
+            moves: self.moves,
+            isCheckMate: self.movesLength != 0 ? self.game.isCheckMate(self.game.whiteTurn, self.lastMove()): false
         };
     }
 
