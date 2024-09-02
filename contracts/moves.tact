@@ -491,16 +491,18 @@ inline fun canMoveKingAndNoCheckMate(board: Board, king: Position, isWhite: Bool
         if(x >= 0 && x <= 7){
             let y: Int = king.y - 1;
             repeat(3){
-                let point = board.at(x, y);
-                //check that not the same spot  &&  (spot is empty || spot is of the opposite color)
-                if (y != king.y || x != king.x) && (point.isEmpty() || (isWhite?point.isBlack():point.isWhite())){
-                    let newBoard = board;
-                    newBoard.set(king.x, king.y, SPOT_EMPTY);
-                    newBoard.set(x, y, isWhite?SPOT_KING_WHITE:SPOT_KING_BLACK);
-                    //if king moved and noone can attack him, then it is not a checkmate
-                    if newBoard.isUnderAttack(Position{
-                    x, y}, !isWhite) == 0 {
-                        return true;
+                if(y >= 0 && y <= 7){
+                    let point = board.at(x, y);
+                    //check that not the same spot  &&  (spot is empty || spot is of the opposite color)
+                    if (y != king.y || x != king.x) && (point.isEmpty() || (isWhite?point.isBlack():point.isWhite())){
+                        let newBoard = board;
+                        newBoard.set(king.x, king.y, SPOT_EMPTY);
+                        newBoard.set(x, y, isWhite?SPOT_KING_WHITE:SPOT_KING_BLACK);
+                        //if king moved and noone can attack him, then it is not a checkmate
+                        if newBoard.isUnderAttack(Position{
+                        x, y}, !isWhite) == 0 {
+                            return true;
+                        }
                     }
                 }
                 y += 1;

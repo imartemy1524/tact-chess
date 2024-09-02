@@ -75,6 +75,7 @@ export function buildChessBoardFromGame({
         halfMoveClock,
     },
     moves,
+    isCheckMate,
 }: GameResponse) {
     const castles: Castles = { whiteKing, whiteQueen, blackKing, blackQueen };
     const enums = buildEnumArray(position);
@@ -99,7 +100,14 @@ export function buildChessBoardFromGame({
         enPassage = toCoordinate(Number(lastMove.toX), Number(lastMove.toY) - 1);
     }
     const fen = buildFenBoard(enums);
-    return buildChessBoard(fen, whiteTurn, castles, ~~(moves.size / 2) + 1, Number(halfMoveClock), enPassage);
+    const ans = buildChessBoard(fen, whiteTurn, castles, ~~(moves.size / 2) + 1, Number(halfMoveClock), enPassage);
+    expect(ans.isCheckmate()).toBe(isCheckMate);
+
+    if(isCheckMate){
+        console.log("Checkmate: \n", ans.ascii());
+    }
+
+    return ans;
 }
 
 export function defaultChess() {

@@ -54,6 +54,9 @@ Kf7 22. Bh6 Rh8 23. Qxh8 Rc2 24. Rc1 Rxg2+ 25. Kf1 Qb3 26. Ke1 Qf3`,
 Bd6 9. O-O O-O 10. Qc2 Bb7 11. a3 Rc8 12. Ng5 c5 13. Nxh7 Ng4 14. f4 cxd4 15.
 exd4 Bc5 16. Be2 Nde5 17. Bxg4 Bxd4+ 18. Kh1 Nxg4 19. Nxf8 f5 20. Ng6 Qf6 21. h3
 Qxg6 22. Qe2 Qh5 23. Qd3 Be3`,
+    `1. d4 d5 2. c4 dxc4 3. e4 e6 4. Bxc4 Nf6 5. Nc3 Bb4 6. e5 Nfd7 7. Nf3 O-O 8. O-O
+Bxc3 9. bxc3 Nc6 10. Bd3 b6 11. Re1 Bb7 12. Bxh7+ Kxh7 13. Ng5+ Kg6 14. Qd3+ f5
+15. exf6+ Kxf6 16. Rxe6#`
 ].map(toGame);
 
 describe('CheckPopuluarGames', () => {

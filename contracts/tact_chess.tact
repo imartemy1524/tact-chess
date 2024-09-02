@@ -12,6 +12,8 @@ struct GameResponse{
 }
 
 contract TactChess with Deployable {
+    override const storageReserve: Int = ton("0.01");
+
     game: Game;
     moves: map<Int as uint16, Move> = emptyMap();
     movesLength: Int as uint16 = 0;
@@ -25,9 +27,10 @@ contract TactChess with Deployable {
         self.game = self.game.move(move.move, self.lastMove(), move.promotion);
         self.moves.set(self.movesLength, move.move);
         self.movesLength = self.movesLength + 1;
+        self.reply(null);
     }
     get fun game(): GameResponse{
-        return GameResponse{
+        return GameResponse {
             game: self.game,
             moves: self.moves,
             isCheckMate: self.movesLength != 0 ? self.game.isCheckMate(self.game.whiteTurn, self.lastMove()): false
