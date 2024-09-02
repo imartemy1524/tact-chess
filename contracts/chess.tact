@@ -132,7 +132,8 @@ extends fun move(self: Game, mv: Move, lastMove: Move, promotionTo: Int): Game{
         require(false, "Uknown piece moved!");
     }
 
-    if(piece.isKing()){
+    //castling logic + moves set
+    if piece.isKing(){
         if(self.whiteTurn){
             self.whiteCanCastleKing = false;
             self.whiteCanCastleQueen = false;
@@ -158,7 +159,7 @@ extends fun move(self: Game, mv: Move, lastMove: Move, promotionTo: Int): Game{
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
         self.board.set(mv.toX, mv.toY, piece);
     }
-    else if(piece.isRook()){
+    else if piece.isRook(){
         //Castling logic
         if(self.whiteTurn){
             if(mv.fromX == 0){
@@ -179,7 +180,7 @@ extends fun move(self: Game, mv: Move, lastMove: Move, promotionTo: Int): Game{
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
         self.board.set(mv.toX, mv.toY, piece);
     }
-    else if(piece.isPawn()){
+    else if piece.isPawn() {
         if(mv.toY == 0 || mv.toY == 7){
             if self.whiteTurn {
                 require(promotionTo == SPOT_ROOK_WHITE || promotionTo == SPOT_KNIGHT_WHITE || promotionTo == SPOT_BISHOP_WHITE || promotionTo == SPOT_QUEEN_WHITE, "Invalid promotion piece");
@@ -204,6 +205,29 @@ extends fun move(self: Game, mv: Move, lastMove: Move, promotionTo: Int): Game{
     else {
         self.board.set(mv.fromX, mv.fromY, SPOT_EMPTY);
         self.board.set(mv.toX, mv.toY, piece);
+    }
+    // if someone ate rock, we need to update castling flags
+    if target.isRook() {
+        // white ate black rock at a8 or h8
+        if (self.whiteTurn && mv.toY == 7 && (mv.toX == 7 || mv.toX == 0)){
+            if mv.toX == 7{
+                self.blackCanCastleKing = false;
+            }
+            else {
+                self.blackCanCastleQueen = false;
+            }
+
+        }
+        // black ate white rock at a1 or h1
+        if (!self.whiteTurn && mv.toY == 0 && (mv.toX == 7 || mv.toX == 0)){
+            if mv.toX == 7 {
+                self.whiteCanCastleKing = false;
+            }
+            else {
+                self.whiteCanCastleQueen = false;
+            }
+        }
+
     }
     // increase halfMoveClock if no pawn was moved and no piece was captured
     self.halfMoveClock = (!piece.isPawn() && target.isEmpty()) ? self.halfMoveClock + 1 : 0;

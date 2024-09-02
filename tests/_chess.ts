@@ -104,7 +104,7 @@ export function buildChessBoardFromGame({
     expect(ans.isCheckmate()).toBe(isCheckMate);
 
     if(isCheckMate){
-        console.log("Checkmate: \n", ans.ascii());
+        // console.log("Checkmate: \n", ans.ascii());
     }
 
     return ans;
@@ -224,9 +224,16 @@ export function expectSuccessMove(
 }
 
 export function toGame(game: string): ([string, string])[] {
-    return game
+    let ans = game
         .replace(/\n/g, ' ')
-        .split(/\d+\. /)
+        //replace {.+?} with empty string
+        .replace(/\{(.+?)} ?/g, '')
+        .replace(/(\d+)\.\.\. ?/g, '');
+    while (ans.includes('(')){
+        ans = ans.replace(/\([^()]*\)/g, '');
+    }
+
+    return ans.split(/\d+\. /)
         .slice(1)
         .map((e) => e.trim().split(' ') as [string, string]);
 }
